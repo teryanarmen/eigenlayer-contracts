@@ -16,24 +16,45 @@ contract PauserRegistryUnitTests is Test {
 
     mapping(address => bool) public addressIsExcludedFromFuzzedInputs;
 
+    event PauserStatusChanged(address pauser, bool canPause);
+
+    event UnpauserChanged(address previousUnpauser, address newUnpauser);
+
     function setUp() virtual public {
-        pauserRegistry = new PauserRegistry(pauser, unpauser);
+        address[] memory pausers = new address[](1);
+        pausers[0] = pauser;
+        pauserRegistry = new PauserRegistry(pausers, unpauser);
     }
 
-    function testSetPauser(address newPauser) public {
+    function testSetIsPauserTrue(address newPauser) public {
         cheats.assume(newPauser != address(0));
 
         cheats.startPrank(pauserRegistry.unpauser());
-        pauserRegistry.setPauser(newPauser);
+        cheats.expectEmit(true, true, true, true, address(pauserRegistry));
+        emit PauserStatusChanged(newPauser, true);
+        pauserRegistry.setIsPauser(newPauser, true);
         cheats.stopPrank();
 
-        require(pauserRegistry.pauser() == newPauser, "pauser not set correctly");
+        require(pauserRegistry.isPauser(newPauser), "newPauser not set correctly");
+    }
+
+    function testSetIsPauserFalse() public {
+        cheats.startPrank(pauserRegistry.unpauser());
+        cheats.expectEmit(true, true, true, true, address(pauserRegistry));
+        emit PauserStatusChanged(pauser, false);
+        pauserRegistry.setIsPauser(pauser, false);
+        cheats.stopPrank();
+
+        require(!pauserRegistry.isPauser(pauser), "pauser not set correctly");
     }
 
     function testSetUnpauser(address newUnpauser) public {
         cheats.assume(newUnpauser != address(0));
 
         cheats.startPrank(pauserRegistry.unpauser());
+        address oldAddress = pauserRegistry.unpauser();
+        cheats.expectEmit(true, true, true, true, address(pauserRegistry));
+        emit UnpauserChanged(oldAddress, newUnpauser);
         pauserRegistry.setUnpauser(newUnpauser);
         cheats.stopPrank();
 
@@ -46,7 +67,7 @@ contract PauserRegistryUnitTests is Test {
 
         cheats.startPrank(notUnpauser);
         cheats.expectRevert(bytes("msg.sender is not permissioned as unpauser"));
-        pauserRegistry.setPauser(newPauser);
+        pauserRegistry.setIsPauser(newPauser, true);
         cheats.stopPrank();
     }
 
@@ -65,7 +86,7 @@ contract PauserRegistryUnitTests is Test {
 
         cheats.startPrank(pauserRegistry.unpauser());
         cheats.expectRevert(bytes("PauserRegistry._setPauser: zero address input"));
-        pauserRegistry.setPauser(newPauser);
+        pauserRegistry.setIsPauser(newPauser, true);
         cheats.stopPrank();
     }
 

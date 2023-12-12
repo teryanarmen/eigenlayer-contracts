@@ -43,8 +43,8 @@ contract ExistingDeploymentParser is Script, Test {
 
     EmptyContract public emptyContract;
 
-    address communityMultisig;
-    address teamMultisig;
+    address executorMultisig;
+    address operationsMultisig;
 
     // strategies deployed
     StrategyBase[] public deployedStrategyArray;
@@ -62,8 +62,8 @@ contract ExistingDeploymentParser is Script, Test {
         require(configChainId == currentChainId, "You are on the wrong chain for this config");
 
         // read all of the deployed addresses
-        communityMultisig = stdJson.readAddress(existingDeploymentData, ".parameters.communityMultisig");
-        teamMultisig = stdJson.readAddress(existingDeploymentData, ".parameters.teamMultisig");
+        executorMultisig = stdJson.readAddress(existingDeploymentData, ".parameters.executorMultisig");
+        operationsMultisig = stdJson.readAddress(existingDeploymentData, ".parameters.operationsMultisig");
         
         eigenLayerProxyAdmin = ProxyAdmin(stdJson.readAddress(existingDeploymentData, ".addresses.eigenLayerProxyAdmin"));
         eigenLayerPauserReg = PauserRegistry(stdJson.readAddress(existingDeploymentData, ".addresses.eigenLayerPauserReg"));
@@ -79,7 +79,7 @@ contract ExistingDeploymentParser is Script, Test {
         delayedWithdrawalRouterImplementation = 
             DelayedWithdrawalRouter(stdJson.readAddress(existingDeploymentData, ".addresses.delayedWithdrawalRouterImplementation"));
         eigenPodBeacon = UpgradeableBeacon(stdJson.readAddress(existingDeploymentData, ".addresses.eigenPodBeacon"));
-        eigenPodImplementation = EigenPod(stdJson.readAddress(existingDeploymentData, ".addresses.eigenPodImplementation"));
+        eigenPodImplementation = EigenPod(payable(stdJson.readAddress(existingDeploymentData, ".addresses.eigenPodImplementation")));
         baseStrategyImplementation = StrategyBase(stdJson.readAddress(existingDeploymentData, ".addresses.baseStrategyImplementation"));
         emptyContract = EmptyContract(stdJson.readAddress(existingDeploymentData, ".addresses.emptyContract"));
 

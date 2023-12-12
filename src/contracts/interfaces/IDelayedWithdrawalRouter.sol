@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.12;
+pragma solidity >=0.5.0;
 
 interface IDelayedWithdrawalRouter {
     // struct used to pack data into a single storage slot
@@ -14,7 +14,16 @@ interface IDelayedWithdrawalRouter {
         DelayedWithdrawal[] delayedWithdrawals;
     }
 
-    /** 
+     /// @notice event for delayedWithdrawal creation
+    event DelayedWithdrawalCreated(address podOwner, address recipient, uint256 amount, uint256 index);
+
+    /// @notice event for the claiming of delayedWithdrawals
+    event DelayedWithdrawalsClaimed(address recipient, uint256 amountClaimed, uint256 delayedWithdrawalsCompleted);
+
+    /// @notice Emitted when the `withdrawalDelayBlocks` variable is modified from `previousValue` to `newValue`.
+    event WithdrawalDelayBlocksSet(uint256 previousValue, uint256 newValue);
+
+    /**
      * @notice Creates an delayed withdrawal for `msg.value` to the `recipient`.
      * @dev Only callable by the `podOwner`'s EigenPod contract.
      */
@@ -39,16 +48,19 @@ interface IDelayedWithdrawalRouter {
     /// @notice Getter function for the mapping `_userWithdrawals`
     function userWithdrawals(address user) external view returns (UserDelayedWithdrawals memory);
 
+    /// @notice Getter function to get all delayedWithdrawals of the `user`
+    function getUserDelayedWithdrawals(address user) external view returns (DelayedWithdrawal[] memory);
+
     /// @notice Getter function to get all delayedWithdrawals that are currently claimable by the `user`
-    function claimableUserDelayedWithdrawals(address user) external view returns (DelayedWithdrawal[] memory);
-    
+    function getClaimableUserDelayedWithdrawals(address user) external view returns (DelayedWithdrawal[] memory);
+
     /// @notice Getter function for fetching the delayedWithdrawal at the `index`th entry from the `_userWithdrawals[user].delayedWithdrawals` array
     function userDelayedWithdrawalByIndex(address user, uint256 index) external view returns (DelayedWithdrawal memory);
 
     /// @notice Getter function for fetching the length of the delayedWithdrawals array of a specific user
     function userWithdrawalsLength(address user) external view returns (uint256);
 
-    /// @notice Convenience function for checking whethere or not the delayedWithdrawal at the `index`th entry from the `_userWithdrawals[user].delayedWithdrawals` array is currently claimable
+    /// @notice Convenience function for checking whether or not the delayedWithdrawal at the `index`th entry from the `_userWithdrawals[user].delayedWithdrawals` array is currently claimable
     function canClaimDelayedWithdrawal(address user, uint256 index) external view returns (bool);
 
     /**

@@ -19,8 +19,16 @@ contract PausableUnitTests is Test {
 
     mapping(address => bool) public addressIsExcludedFromFuzzedInputs;
 
+    /// @notice Emitted when the pause is triggered by `account`, and changed to `newPausedStatus`.
+    event Paused(address indexed account, uint256 newPausedStatus);
+
+    /// @notice Emitted when the pause is lifted by `account`, and changed to `newPausedStatus`.
+    event Unpaused(address indexed account, uint256 newPausedStatus);
+
     function setUp() virtual public {
-        pauserRegistry = new PauserRegistry(pauser, unpauser);
+        address[] memory pausers = new address[](1);
+        pausers[0] = pauser;
+        pauserRegistry = new PauserRegistry(pausers, unpauser);
         pausable = new PausableHarness();
         pausable.initializePauser(pauserRegistry, initPausedStatus);
     }
@@ -41,13 +49,17 @@ contract PausableUnitTests is Test {
         // filter out any fuzzed inputs which would (improperly) flip any bits to '0'.
         cheats.assume(previousPausedStatus & newPausedStatus == previousPausedStatus);
 
-        cheats.startPrank(pausable.pauserRegistry().pauser());
+        cheats.startPrank(pauser);
+        cheats.expectEmit(true, true, true, true, address(pausable));
+        emit Paused(pauser, previousPausedStatus);
         pausable.pause(previousPausedStatus);
         cheats.stopPrank();
 
         require(pausable.paused() == previousPausedStatus, "previousPausedStatus not set correctly");
 
-        cheats.startPrank(pausable.pauserRegistry().pauser());
+        cheats.startPrank(pauser);
+        cheats.expectEmit(true, true, true, true, address(pausable));
+        emit Paused(pauser, newPausedStatus);
         pausable.pause(newPausedStatus);
         cheats.stopPrank();
 
@@ -55,7 +67,7 @@ contract PausableUnitTests is Test {
     }
 
     function testPause_RevertsWhenCalledByNotPauser(address notPauser, uint256 newPausedStatus) public {
-        cheats.assume(notPauser != pausable.pauserRegistry().pauser());
+        cheats.assume(notPauser != pauser);
 
         cheats.startPrank(notPauser);
         cheats.expectRevert(bytes("msg.sender is not permissioned as pauser"));
@@ -64,13 +76,17 @@ contract PausableUnitTests is Test {
     }
 
     function testPauseAll(uint256 previousPausedStatus) public {
-        cheats.startPrank(pausable.pauserRegistry().pauser());
+        cheats.startPrank(pauser);
+        cheats.expectEmit(true, true, true, true, address(pausable));
+        emit Paused(pauser, previousPausedStatus);
         pausable.pause(previousPausedStatus);
         cheats.stopPrank();
 
         require(pausable.paused() == previousPausedStatus, "previousPausedStatus not set correctly");
 
-        cheats.startPrank(pausable.pauserRegistry().pauser());
+        cheats.startPrank(pauser);
+        cheats.expectEmit(true, true, true, true, address(pausable));
+        emit Paused(pauser, type(uint256).max);
         pausable.pauseAll();
         cheats.stopPrank();
 
@@ -78,7 +94,7 @@ contract PausableUnitTests is Test {
     }
 
     function testPauseAll_RevertsWhenCalledByNotPauser(address notPauser) public {
-        cheats.assume(notPauser != pausable.pauserRegistry().pauser());
+        cheats.assume(notPauser != pauser);
 
         cheats.startPrank(notPauser);
         cheats.expectRevert(bytes("msg.sender is not permissioned as pauser"));
@@ -90,13 +106,15 @@ contract PausableUnitTests is Test {
         // filter to only fuzzed inputs which would (improperly) flip any bits to '0'.
         cheats.assume(previousPausedStatus & newPausedStatus != previousPausedStatus);
 
-        cheats.startPrank(pausable.pauserRegistry().pauser());
+        cheats.startPrank(pauser);
+        cheats.expectEmit(true, true, true, true, address(pausable));
+        emit Paused(pauser, previousPausedStatus);
         pausable.pause(previousPausedStatus);
         cheats.stopPrank();
 
         require(pausable.paused() == previousPausedStatus, "previousPausedStatus not set correctly");
 
-        cheats.startPrank(pausable.pauserRegistry().pauser());
+        cheats.startPrank(pauser);
         cheats.expectRevert(bytes("Pausable.pause: invalid attempt to unpause functionality"));
         pausable.pause(newPausedStatus);
         cheats.stopPrank();
@@ -112,13 +130,17 @@ contract PausableUnitTests is Test {
         // filter out any fuzzed inputs which would (improperly) flip any bits to '1'.
         cheats.assume(~previousPausedStatus & ~newPausedStatus == ~previousPausedStatus);
 
-        cheats.startPrank(pausable.pauserRegistry().pauser());
+        cheats.startPrank(pauser);
+        cheats.expectEmit(true, true, true, true, address(pausable));
+        emit Paused(pauser, previousPausedStatus);
         pausable.pause(previousPausedStatus);
         cheats.stopPrank();
 
         require(pausable.paused() == previousPausedStatus, "previousPausedStatus not set correctly");
 
         cheats.startPrank(pausable.pauserRegistry().unpauser());
+        cheats.expectEmit(true, true, true, true, address(pausable));
+        emit Unpaused(pausable.pauserRegistry().unpauser(), newPausedStatus);
         pausable.unpause(newPausedStatus);
         cheats.stopPrank();
 
@@ -139,7 +161,7 @@ contract PausableUnitTests is Test {
         // filter to only fuzzed inputs which would (improperly) flip any bits to '1'.
         cheats.assume(~previousPausedStatus & ~newPausedStatus != ~previousPausedStatus);
 
-        cheats.startPrank(pausable.pauserRegistry().pauser());
+        cheats.startPrank(pauser);
         pausable.pause(previousPausedStatus);
         cheats.stopPrank();
 
